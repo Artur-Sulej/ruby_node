@@ -94,5 +94,12 @@ p message_type
 p their_digest
 p "¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯"
 
+# KEEP_ALIVE
+
+loop do
+  socket.write [0].pack("N")
+  sleep 15
+end
+
 sleep 3000000
 
