@@ -5,7 +5,7 @@ NODE_SHORT_NAME = "red_node"
 
 def send_name
   message_type = "N"
-  flags = "0000000000000000000000000000110100000111110111110111111110111101".to_i(2)
+  flags = "0000000000000000000000000000110100000111110111110101111110010101".to_i(2)
   creation = Time.now.to_i
   my_hostname = Socket.gethostname.split(".", 2)[0]
   this_node_name = "#{NODE_SHORT_NAME}@#{my_hostname}"
