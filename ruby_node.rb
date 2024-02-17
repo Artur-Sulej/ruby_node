@@ -94,11 +94,25 @@ p message_type
 p their_digest
 p "¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯"
 
-# KEEP_ALIVE
+Thread.new do
+  loop do
+    puts "Reading from socket..."
 
-loop do
-  socket.write [0].pack("N")
-  sleep 15
+    message_length = socket.read(4).unpack1("N")
+    incoming_message = socket.read(message_length)
+    break if incoming_message.nil?
+
+    puts "Received message:"
+    p incoming_message
+  end
+end
+
+# KEEP_ALIVE
+Thread.new do
+  loop do
+    socket.write [0].pack("N")
+    sleep 15
+  end
 end
 
 sleep 3000000
