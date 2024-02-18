@@ -16,15 +16,15 @@ defmodule Purple.PortGenServer do
   end
 
   def handle_call({:send_payload, request_payload}, from_pid, state) do
-    ref = make_ref()
+    message_id = generate_message_id()
 
     encoded_message =
       Jason.encode!(%{
-        headers: %{message_id: ref |> :erlang.term_to_binary() |> Base.encode16()},
+        headers: %{message_id: message_id},
         payload: request_payload
       })
 
-    new_state = put_in(state, [:callers, ref], from_pid)
+    new_state = put_in(state, [:callers, message_id], from_pid)
     Port.command(state.port, "#{encoded_message}\n")
 
     {:noreply, new_state}
@@ -36,17 +36,20 @@ defmodule Purple.PortGenServer do
       payload: response_payload
     } = Jason.decode!(encoded_message, keys: :atoms!)
 
-    ref = message_id |> Base.decode16!() |> :erlang.binary_to_term()
-    from_pid = Map.fetch!(state.callers, ref)
+    from_pid = Map.fetch!(state.callers, message_id)
     GenServer.reply(from_pid, {:ok, response_payload})
-    {:noreply, %{state | callers: Map.delete(state.callers, ref)}}
+    {:noreply, %{state | callers: Map.delete(state.callers, message_id)}}
   end
 
-  def handle_info({:DOWN, _ref, :port, _port, _reason} = msg, state) do
+  def handle_info({:DOWN, _ref, :port, _port, _reason}, state) do
     {:noreply, state}
   end
 
-  def handle_info(msg, state) do
+  def handle_info(_msg, state) do
     {:noreply, state}
+  end
+
+  defp generate_message_id() do
+    make_ref() |> :erlang.term_to_binary() |> Base.encode16()
   end
 end
