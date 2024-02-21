@@ -2,7 +2,7 @@ defmodule Purple.PortGenServer do
   use GenServer
 
   def start_link(port_executable) do
-    GenServer.start_link(__MODULE__, port_executable, name: __MODULE__)
+    GenServer.start_link(__MODULE__, port_executable)
   end
 
   def init(port_executable) do
@@ -11,8 +11,11 @@ defmodule Purple.PortGenServer do
     {:ok, %{port: port, callers: %{}}}
   end
 
-  def send_payload(payload) do
-    GenServer.call(__MODULE__, {:send_payload, payload})
+  def send_payload([module_name, fun_name, args]) when is_list(args) do
+    pid = :poolboy.checkout(:port_worker)
+    result = GenServer.call(pid, {:send_payload, [module_name, fun_name, args]})
+    :poolboy.checkin(:port_worker, pid)
+    result
   end
 
   def handle_call({:send_payload, request_payload}, from_pid, state) do
