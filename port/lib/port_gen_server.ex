@@ -43,18 +43,33 @@ defmodule Purple.PortGenServer do
       encoded_message
       |> String.trim()
       |> String.split("\n")
-      |> Enum.map(&Jason.decode!(&1, keys: :atoms!))
+      |> Enum.map(&Jason.decode(&1, keys: :atoms!))
 
     message_ids =
       Enum.map(
         decoded_messages,
-        fn %{
+        fn
+          {:ok,
+           %{
              headers: %{message_id: message_id},
              payload: response_payload
-           } ->
-          from_pid = Map.fetch!(state.callers, message_id)
-          GenServer.reply(from_pid, {:ok, response_payload})
-          message_id
+           }} ->
+            from_pid = Map.fetch!(state.callers, message_id)
+            GenServer.reply(from_pid, {:ok, response_payload})
+            message_id
+
+          {:ok,
+           %{
+             headers: %{message_id: message_id},
+             error: error
+           }} ->
+            from_pid = Map.fetch!(state.callers, message_id)
+            GenServer.reply(from_pid, {:error, error})
+            message_id
+
+          {:error, error} ->
+            IO.puts("Error in port: #{inspect(error.data)}")
+            nil
         end
       )
 

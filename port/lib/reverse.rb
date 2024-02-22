@@ -1,7 +1,7 @@
 require "json"
 
 $stdout.sync = true
-# $stderr = $stdout
+$stderr = $stdout
 
 module Reverse
   def self.reverse(string)
@@ -16,17 +16,27 @@ module Reverse
 end
 
 while input = gets
-  request = JSON.parse!(input.strip)
-  headers = request["headers"]
-  module_name, function_name, arguments = request["payload"]
+  begin
+    request = JSON.parse!(input.strip)
+    headers = request["headers"]
+    module_name, function_name, arguments = request["payload"]
 
-  mod = Object.const_get(module_name)
-  result = mod.public_send(function_name, *arguments)
+    mod = Object.const_get(module_name)
+    result = mod.public_send(function_name, *arguments)
 
-  response = {
-    "headers" => headers,
-    "payload" => result
-  }
+    response = {
+      "headers" => headers,
+      "payload" => result
+    }
 
-  puts response.to_json
+    puts response.to_json
+
+  rescue => e
+    response = {
+      "headers" => headers,
+      "error" => e.message
+    }
+
+    puts response.to_json
+  end
 end
