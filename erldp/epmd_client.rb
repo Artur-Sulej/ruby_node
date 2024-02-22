@@ -4,7 +4,7 @@ class EPMDClient
   EPMD_PORT = 4369
   HOST = "127.0.0.1"
 
-  def open_connection
+  def initialize
     @socket = TCPSocket.new(HOST, EPMD_PORT)
   end
 
