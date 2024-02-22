@@ -57,15 +57,33 @@ defmodule Purple.PortGenServer do
     {:noreply, %{state | callers: callers}}
   end
 
-  def handle_info({:DOWN, _ref, :port, _port, _reason}, state) do
+  def handle_info({:DOWN, _ref, :port, _port, reason}, state) do
+    state
+    |> Map.get(:callers, %{})
+    |> Map.values()
+    |> Enum.each(&GenServer.reply(&1, {:error, reason}))
+
+    GenServer.stop(self(), :restart_needed)
+    {:noreply, %{}}
+  end
+
+  def handle_info(_message, state) do
     {:noreply, state}
   end
 
-  def handle_info(_msg, state) do
-    {:noreply, state}
+  def terminate(_reason, state) do
+    port = state[:port]
+
+    cond do
+      is_nil(port) -> :ok
+      port |> Port.info() |> is_nil() -> :ok
+      true -> Port.close(port)
+    end
+
+    :ok
   end
 
   defp generate_message_id() do
-    make_ref() |> :erlang.term_to_binary() |> Base.encode16()
+    make_ref() |> :erlang.term_to_binary() |> Base.encode64()
   end
 end
