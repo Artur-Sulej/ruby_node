@@ -1,6 +1,10 @@
 defmodule DelegateToPortMacro do
   defmacro delegate_to_port(function_name, arity) do
-    arguments = Enum.map(1..arity, &Macro.var(:"arg#{&1}", nil))
+    arguments =
+      case arity do
+        0 -> []
+        _ -> Enum.map(1..arity, &Macro.var(:"arg#{&1}", nil))
+      end
 
     quote do
       def unquote(function_name)(unquote_splicing(arguments)) do
