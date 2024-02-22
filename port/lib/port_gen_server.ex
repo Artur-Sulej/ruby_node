@@ -34,14 +34,27 @@ defmodule Purple.PortGenServer do
   end
 
   def handle_info({_port, {:data, encoded_message}}, state) do
-    %{
-      headers: %{message_id: message_id},
-      payload: response_payload
-    } = Jason.decode!(encoded_message, keys: :atoms!)
+    decoded_messages =
+      encoded_message
+      |> String.trim()
+      |> String.split("\n")
+      |> Enum.map(&Jason.decode!(&1, keys: :atoms!))
 
-    from_pid = Map.fetch!(state.callers, message_id)
-    GenServer.reply(from_pid, {:ok, response_payload})
-    {:noreply, %{state | callers: Map.delete(state.callers, message_id)}}
+    message_ids =
+      Enum.map(
+        decoded_messages,
+        fn %{
+             headers: %{message_id: message_id},
+             payload: response_payload
+           } ->
+          from_pid = Map.fetch!(state.callers, message_id)
+          GenServer.reply(from_pid, {:ok, response_payload})
+          message_id
+        end
+      )
+
+    callers = Map.drop(state.callers, message_ids)
+    {:noreply, %{state | callers: callers}}
   end
 
   def handle_info({:DOWN, _ref, :port, _port, _reason}, state) do
