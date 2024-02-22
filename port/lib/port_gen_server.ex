@@ -6,9 +6,14 @@ defmodule Purple.PortGenServer do
   end
 
   def init(port_executable) do
+    port = open_port(port_executable)
+    {:ok, %{port_executable: port_executable, port: port, callers: %{}}}
+  end
+
+  defp open_port(port_executable) do
     port = Port.open(port_executable, [:binary])
     Port.monitor(port)
-    {:ok, %{port: port, callers: %{}}}
+    port
   end
 
   def send_payload([module_name, fun_name, args]) when is_list(args) do
@@ -63,8 +68,8 @@ defmodule Purple.PortGenServer do
     |> Map.values()
     |> Enum.each(&GenServer.reply(&1, {:error, reason}))
 
-    GenServer.stop(self(), :restart_needed)
-    {:noreply, %{}}
+    port = open_port(state.port_executable)
+    {:noreply, %{port_executable: state.port_executable, port: port, callers: %{}}}
   end
 
   def handle_info(_message, state) do
