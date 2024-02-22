@@ -1,35 +1,41 @@
 require 'socket'
 
-EPMD_PORT = 4369
-THEIR_NODE_SHORT_NAME = "purple_node"
+class EPMDClient
+  EPMD_PORT = 4369
+  HOST = "127.0.0.1"
 
-def build_tcp_message(data)
-  encoded_data =
-    data.map do |(value, pack)|
-      if pack
-        [value].pack(pack)
-      else
-        value
-      end
-    end.join
+  def open_connection
+    @socket = TCPSocket.new(HOST, EPMD_PORT)
+  end
 
-  [encoded_data.size].pack("n") + encoded_data
+  def port_please(node_name)
+    data = [
+      [122, "C"],
+      [node_name, nil]
+    ]
+
+    @socket.write build_tcp_message(data)
+    message = @socket.read
+    message_type = message.byteslice(0, 1)
+    raise "Unexpected EPMD message type #{message_type}" unless message_type == "w"
+    status = message.byteslice(1, 1).unpack1("C")
+    raise "Unexpected EPMD status: #{status}" unless status == 0
+    port = message.byteslice(2, 2).unpack1("n")
+    port
+  end
+
+  private
+
+  def build_tcp_message(data)
+    encoded_data =
+      data.map do |(value, pack)|
+        if pack
+          [value].pack(pack)
+        else
+          value
+        end
+      end.join
+
+    [encoded_data.size].pack("n") + encoded_data
+  end
 end
-
-epmd_socket = TCPSocket.new("127.0.0.1", EPMD_PORT)
-
-data = [
-  [122, "C"],
-  [THEIR_NODE_SHORT_NAME, nil]
-]
-
-epmd_socket.write build_tcp_message(data)
-message = epmd_socket.read
-
-message_type = message.byteslice(0, 1).unpack1("C")
-result = message.byteslice(1, 1).unpack1("C")
-port = message.byteslice(2, 2).unpack1("n")
-
-p "_______________"
-p [message_type, result, port]
-p "¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯"
