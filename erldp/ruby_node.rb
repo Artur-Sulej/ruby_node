@@ -1,6 +1,8 @@
 require 'socket'
 require 'digest/md5'
 require_relative 'epmd_client'
+require_relative 'rpc_serializer'
+require_relative 'reverse'
 
 class RubyNode
   HOST = "localhost"
@@ -53,15 +55,31 @@ class RubyNode
 
     Thread.new do
       loop do
-        message_length = node_socket.read(4).unpack1("N")
+        raise "Socket closed" if node_socket.closed?
+        message_length = node_socket.read(4)&.unpack1("N")
         incoming_message = node_socket.read(message_length)
         break if incoming_message.nil?
 
         unless incoming_message.empty?
-          puts "Received message:"
-          p incoming_message
+          decoded_message = RPCSerializer.binary_to_term(incoming_message)
+          next unless decoded_message
+
+          module_name, function_name, arguments = decoded_message
+          apply_function(module_name, function_name, arguments)
         end
       end
+    end
+  end
+
+  def apply_function(module_name, function_name, arguments)
+    begin
+      mod = Object.const_get(module_name)
+      result = mod.public_send(function_name, *arguments)
+      puts "Result: #{result}"
+      result
+    rescue => e
+      puts "Error: #{e}"
+      nil
     end
   end
 
