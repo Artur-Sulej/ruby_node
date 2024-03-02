@@ -1,9 +1,9 @@
-defmodule Purple.MixProject do
+defmodule Proxy.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :purple,
+      app: :proxy,
       version: "0.1.0",
       elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
@@ -14,7 +14,7 @@ defmodule Purple.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Purple.Application, []}
+      mod: {Proxy.Application, []}
     ]
   end
 

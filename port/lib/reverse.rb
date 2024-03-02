@@ -7,12 +7,6 @@ module Reverse
   def self.reverse(string)
     string.reverse
   end
-
-  def self.faulty_function(probability)
-    value = rand.round(3)
-    raise "Error! (#{value} <= #{probability})" if value <= probability
-    "No error (#{value} > #{probability})"
-  end
 end
 
 while input = gets

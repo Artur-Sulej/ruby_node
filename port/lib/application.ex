@@ -1,4 +1,4 @@
-defmodule Purple.Application do
+defmodule Proxy.Application do
   @moduledoc false
 
   use Application
@@ -9,14 +9,14 @@ defmodule Purple.Application do
       :poolboy.child_spec(:port_worker, poolboy_config(), {:spawn, "ruby lib/reverse.rb"})
     ]
 
-    opts = [strategy: :one_for_one, name: Purple.Supervisor]
+    opts = [strategy: :one_for_one, name: Proxy.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
   defp poolboy_config do
     [
       name: {:local, :port_worker},
-      worker_module: Purple.PortGenServer,
+      worker_module: Proxy.PortGenServer,
       size: 10,
       max_overflow: 0,
       strategy: :fifo

@@ -1,8 +1,15 @@
-defmodule Purple.PortGenServer do
+defmodule Proxy.PortGenServer do
   use GenServer
 
   def start_link(port_executable) do
     GenServer.start_link(__MODULE__, port_executable)
+  end
+
+  def send_payload([module_name, fun_name, args]) when is_list(args) do
+    pid = :poolboy.checkout(:port_worker)
+    result = GenServer.call(pid, {:send_payload, [module_name, fun_name, args]})
+    :poolboy.checkin(:port_worker, pid)
+    result
   end
 
   def init(port_executable) do
@@ -16,20 +23,13 @@ defmodule Purple.PortGenServer do
     port
   end
 
-  def send_payload([module_name, fun_name, args]) when is_list(args) do
-    pid = :poolboy.checkout(:port_worker)
-    result = GenServer.call(pid, {:send_payload, [module_name, fun_name, args]})
-    :poolboy.checkin(:port_worker, pid)
-    result
-  end
-
-  def handle_call({:send_payload, request_payload}, from_pid, state) do
+  def handle_call({:send_payload, {module_name, fun_name, args}}, from_pid, state) do
     message_id = generate_message_id()
 
     encoded_message =
       Jason.encode!(%{
         headers: %{message_id: message_id},
-        payload: request_payload
+        payload: Tuple.to_list({module_name, fun_name, args})
       })
 
     new_state = put_in(state, [:callers, message_id], from_pid)
@@ -39,39 +39,34 @@ defmodule Purple.PortGenServer do
   end
 
   def handle_info({_port, {:data, encoded_message}}, state) do
-    decoded_messages =
+    message_ids =
       encoded_message
       |> String.trim()
       |> String.split("\n")
       |> Enum.map(&Jason.decode(&1, keys: :atoms!))
+      |> Enum.map(fn
+        {:ok,
+         %{
+           headers: %{message_id: message_id},
+           payload: response_payload
+         }} ->
+          from_pid = Map.fetch!(state.callers, message_id)
+          GenServer.reply(from_pid, {:ok, response_payload})
+          message_id
 
-    message_ids =
-      Enum.map(
-        decoded_messages,
-        fn
-          {:ok,
-           %{
-             headers: %{message_id: message_id},
-             payload: response_payload
-           }} ->
-            from_pid = Map.fetch!(state.callers, message_id)
-            GenServer.reply(from_pid, {:ok, response_payload})
-            message_id
+        {:ok,
+         %{
+           headers: %{message_id: message_id},
+           error: error
+         }} ->
+          from_pid = Map.fetch!(state.callers, message_id)
+          GenServer.reply(from_pid, {:error, error})
+          message_id
 
-          {:ok,
-           %{
-             headers: %{message_id: message_id},
-             error: error
-           }} ->
-            from_pid = Map.fetch!(state.callers, message_id)
-            GenServer.reply(from_pid, {:error, error})
-            message_id
-
-          {:error, error} ->
-            IO.puts("Error in port: #{inspect(error.data)}")
-            nil
-        end
-      )
+        {:error, error} ->
+          IO.puts("Error in port: #{inspect(error)}")
+          nil
+      end)
 
     callers = Map.drop(state.callers, message_ids)
     {:noreply, %{state | callers: callers}}

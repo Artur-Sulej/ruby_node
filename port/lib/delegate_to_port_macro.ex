@@ -8,7 +8,7 @@ defmodule DelegateToPortMacro do
 
     quote do
       def unquote(function_name)(unquote_splicing(arguments)) do
-        Purple.PortGenServer.send_payload([
+        Proxy.PortGenServer.send_payload([
           __MODULE__ |> inspect() |> String.replace(".", "::"),
           Atom.to_string(unquote(function_name)),
           [unquote_splicing(arguments)]
