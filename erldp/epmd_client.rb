@@ -10,8 +10,8 @@ class EPMDClient
 
   def port_please(node_name)
     data = [
-      [122, "C"],
-      [node_name, nil]
+      [122, "C"],       # EPMD_PORT2_REQ, 1-byte
+      [node_name, nil]  # name of recipient node, string
     ]
 
     @socket.write build_tcp_message(data)

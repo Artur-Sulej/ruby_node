@@ -90,29 +90,37 @@ class RubyNode
     my_hostname = Socket.gethostname.split(".", 2)[0]
     this_node_full_name = "#{@this_node_name}@#{my_hostname}"
 
+    # Each part of message is prepared and packed into
+    # appropriate byte representation.
+    # All numbers are big-endian (order of bytes).
     data = [
-      [message_type, nil],
-      [flags, "Q>"],
-      [creation, "N"],
-      [this_node_full_name.size, "n"],
-      [this_node_full_name, nil]
+      [message_type, nil],             # string
+      [flags, "Q>"],                   # 8-byte big-endian
+      [creation, "N"],                 # 4-byte big-endian
+      [this_node_full_name.size, "n"], # 2-byte big-endian
+      [this_node_full_name, nil]       # string
     ]
 
     build_tcp_message(data)
   end
 
   def receive_status_msg(node_socket)
+    # Read 2-bytes (big-endian) and interpret them as a number
     message_length = node_socket.read(2).unpack1("n")
+    # Use this number to read this number of bytes
     message = node_socket.read(message_length)
 
+    # Get 1 byte from the message
     message_type = message.byteslice(0, 1)
     raise "Unexpected message type #{message_type}" unless message_type == "s"
 
+    # Get next 2 bytes from the message
     status = message.byteslice(1, 2)
     raise "Unexpected status: #{status}" unless status == "ok"
   end
 
   def receive_challenge_msg(node_socket)
+    # Similar pattern: read size, read the rest, interpret the content
     message_length = node_socket.read(2).unpack1("n")
     message = node_socket.read(message_length)
     _message_type = message.byteslice(0, 1)
@@ -149,6 +157,8 @@ class RubyNode
     raise "Invalid digest received #{their_digest}" unless validate_digest(their_digest)
   end
 
+  # [1709847958].pack("N")
+  # => "e\xEA5\x96"
   def build_tcp_message(data)
     encoded_data =
       data.map do |(value, pack)|

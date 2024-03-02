@@ -15,6 +15,7 @@ while input = gets
     headers = request["headers"]
     module_name, function_name, arguments = request["payload"]
 
+    # Getting MFA and invoking given module
     mod = Object.const_get(module_name)
     result = mod.public_send(function_name, *arguments)
 

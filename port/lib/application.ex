@@ -5,6 +5,10 @@ defmodule Proxy.Application do
 
   @impl true
   def start(_type, _args) do
+    # Starting poolboy that will manage PortGenServers.
+    # It's a generic, framework-like solution, so it can be used with other processes, languages etc.
+    # In this case args to start Ruby app are passed.
+
     children = [
       :poolboy.child_spec(:port_worker, poolboy_config(), {:spawn, "ruby lib/reverse.rb"})
     ]
