@@ -1,7 +1,9 @@
 # Ruby Node
 
-Code used for the
-talk: [Ruby as a Node on Code BEAM America 2024](https://codebeamamerica.com/participants/artur-sulej/)
+Code for the talk _Ruby as a Node on Code BEAM America 2024_
+
+* [Talk info](https://codebeamamerica.com/participants/artur-sulej/)
+* [Slides](Code_BEAM_America_2024_Slides.pdf)
 
 It contains two solutions:
 
